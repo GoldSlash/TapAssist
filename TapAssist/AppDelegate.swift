@@ -1,21 +1,64 @@
-//
-//  AppDelegate.swift
-//  TapAssist
-//
-//  Created by Patrick Corrigan on 8/20/15.
-//  Copyright (c) 2015 Gold Slash. All rights reserved.
-//
-
 import UIKit
+import CoreMotion
+import CoreLocation
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
-
+    
     var window: UIWindow?
-
-
+    
+    let manager = CMMotionManager()
+    var knocked : Bool = false
+    let motionUpdateInterval : Double = 0.05
+    var knockReset : Double = 2.0
+    var accelerationZ = 0.3
+    
+    let locationManager = CLLocationManager()
+    
     func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
-        // Override point for customization after application launch.
+        
+        locationManager.requestAlwaysAuthorization()
+        locationManager.startUpdatingLocation()
+        
+        if manager.deviceMotionAvailable {
+            manager.deviceMotionUpdateInterval = motionUpdateInterval // seconds
+            
+            manager.startDeviceMotionUpdatesToQueue(NSOperationQueue.mainQueue()) {
+                [weak self] (data: CMDeviceMotion!, error: NSError!) in
+                
+                
+                if (data.userAcceleration.z < -self!.accelerationZ) || (data.userAcceleration.z > self!.accelerationZ) { // Check if device is knocked
+                    
+                    // Check for double knock
+                    if self!.knocked == false {
+                        // First knock
+                        println("First Knock")
+                        self!.knocked = true
+                        
+                    }else{
+                        // Second knock
+                        println("Double Knocked")
+                        self!.knocked = false
+                        self!.knockReset = 2.0
+                        
+                        // Action:
+                    }
+                }
+                
+                // Countdown for reset action (second knock must be within the knockReset limit)
+                if (self!.knocked) && (self!.knockReset >= 0.0) {
+                    
+                    self!.knockReset = self!.knockReset - self!.motionUpdateInterval
+                    
+                }else if self!.knocked == true {
+                    self!.knocked = false
+                    self!.knockReset = 2.0
+                    println("Reset")
+                }
+                
+            }
+        }
+        
         return true
     }
 
